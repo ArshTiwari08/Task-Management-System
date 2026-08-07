@@ -38,3 +38,17 @@
   --low: #5FBB92;
   --low-soft: #162B1E;
 }
+*{box-sizing: border-box;}
+body{
+  margin: 0;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--ink);
+  font-size: 13.5px;
+  transition: background-color .25s ease, color .25s ease;
+}
+.dash{
+  max-width:1150px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+}
