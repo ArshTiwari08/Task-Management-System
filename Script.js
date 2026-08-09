@@ -111,6 +111,7 @@ function escapeHTML(str){
 }
 
 // Rendering
+
 function render(){
   // Filter
 let visible = tasks.filter(t => {
@@ -183,3 +184,181 @@ visible.forEach(task => {
 
 renderStats();
 }
+
+function renderStats(){
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const active = total - done;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    statTotal.textContent = total;
+    statActive.textContent = active;
+    statDone.textContent = done;
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    progressTrack.setAttribute('aria-valuenow', pct);
+}
+// CRUD OPERATION
+function addTask(text, due, priority, category){
+    tasks.unshift({
+    id: uid(),
+    text: text.trim(),
+    due: due || null,
+    priority,
+    category,
+    completed: false,
+    createdAt: Date.now()
+    });
+    saveTasks();
+    render();
+}
+function deleteTask(id){
+    const row = taskListEl.querySelector(`[data-id="${id}"]`);
+    if(row){
+    row.style.transition = 'opacity .15s ease, transform .15s ease';
+    row.style.opacity = '0';
+    row.style.transform = 'translateX(8px)';
+    }
+    setTimeout(() => {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+    }, 120);
+}
+function toggleComplete(id){
+    const task = tasks.find(t => t.id === id);
+    if(task){
+    task.completed = !task.completed;
+    saveTasks();
+    render();
+    }
+}
+function updateTask(id, data){
+    const task = tasks.find(t => t.id === id);
+    if(task){
+        Object.assign(task, data);
+    saveTasks();
+    render();
+    }
+}
+function clearAllTasks(){
+    if(tasks.length === 0) return;
+    const ok = confirm('Clear all entries? This cannot be undone.');
+    if(!ok) return;
+    tasks = [];
+    saveTasks();
+    render();
+}
+
+// Edit Model
+function openEditModal(id){
+    const task = tasks.find(t => t.id === id);
+    if(!task) return;
+    editId.value = task.id;
+    editText.value = task.text;
+    editDue.value = task.due || '';
+    editPriority.value = task.priority;
+    editCategory.value = task.category;
+    editModalOverlay.classList.add('show');
+    setTimeout(() => editText.focus(), 50);
+}
+function closeEditModal(){
+    editModalOverlay.classList.remove('show');
+}
+
+cancelEdit.addEventListener('click', closeEditModal);
+editModalOverlay.addEventListener('click', e => {
+    if(e.target === editModalOverlay) closeEditModal();
+});
+document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && editModalOverlay.classList.contains('show')) closeEditModal();
+});
+
+editForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = editText.value.trim();
+    if(!text) return;
+    updateTask(editId.value, {
+    text,
+    due: editDue.value || null,
+    priority: editPriority.value,
+    category: editCategory.value
+    });
+    closeEditModal();
+});
+
+// Drag and Drop reorder
+function onDragStart(e){
+    dragSrcId = this.dataset.id;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragSrcId);
+}
+
+function onDragOver(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if(this.dataset.id !== dragSrcId) this.classList.add('drag-over');
+}
+
+function onDragLeave(){
+    this.classList.remove('drag-over');
+}
+
+function onDrop(e){
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    const targetId = this.dataset.id;
+    if(!dragSrcId || dragSrcId === targetId) return;
+
+    const srcIndex = tasks.findIndex(t => t.id === dragSrcId);
+    const targetIndex = tasks.findIndex(t => t.id === targetId);
+    if(srcIndex === -1 || targetIndex === -1) return;
+
+    const [moved] = tasks.splice(srcIndex, 1);
+    tasks.splice(targetIndex, 0, moved);
+
+    saveTasks();
+    render();
+}
+function onDragEnd(){
+    this.classList.remove('dragging');
+    document.querySelectorAll('.task-row.drag-over').forEach(el => el.classList.remove('drag-over'));
+    dragSrcId = null;
+}
+
+// Form Submit
+taskForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = taskInput.value.trim();
+    if(!text) return;
+    addTask(text, dueDateInput.value, priorityInput.value, categoryInput.value);
+    taskForm.reset();
+    priorityInput.value = 'medium';
+    taskInput.focus();
+});
+
+// ---------- Search / filter / category ----------
+searchInput.addEventListener('input', () => {
+    searchTerm = searchInput.value;
+    render();
+});
+
+filterTabs.addEventListener('click', e => {
+    const btn = e.target.closest('.tab');
+    if(!btn) return;
+    currentFilter = btn.dataset.filter;
+    [...filterTabs.querySelectorAll('.tab')].forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+});
+
+categoryFilter.addEventListener('change', () => {
+    currentCategory = categoryFilter.value;
+    render();
+});
+
+clearAllBtn.addEventListener('click', clearAllTasks);
+
+// ---------- Init ----------
+render();
