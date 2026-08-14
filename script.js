@@ -1,4 +1,4 @@
-// Simple Working JS
+// Simple Working javaScript
 const STORAGE_KEY = 'ledger_tasks_v1';
 const THEME_KEY = 'ledger_theme_v1';
 // State
